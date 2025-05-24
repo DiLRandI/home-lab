@@ -72,6 +72,7 @@
   tempfile:
     state: directory
     suffix: prometheus
+    path: /var/tmp
   register: __prometheus_temp_dir
   when:
     - not __prometheus_is_installed.stat.exists or

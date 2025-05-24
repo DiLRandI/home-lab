@@ -39,6 +39,7 @@
     - "{{ grafana_config_dir }}"
     - "{{ grafana_data_dir }}"
     - "{{ grafana_logs_dir }}"
+    - "{{ grafana_home_dir }}"
     - "{{ grafana_dashboards_dir }}"
     - "{{ grafana_provisioning_dir }}"
     - "{{ grafana_datasources_dir }}"
@@ -46,11 +47,11 @@
 
 - name: Check if grafana is installed
   stat:
-    path: "/usr/local/bin/grafana-server"
+    path: "/usr/local/bin/grafana"
   register: __grafana_is_installed
 
 - name: Check current grafana version
-  command: /usr/local/bin/grafana-server --version
+  command: /usr/local/bin/grafana --version
   register: __grafana_current_version_output
   when: __grafana_is_installed.stat.exists
   changed_when: false
@@ -75,6 +76,7 @@
   tempfile:
     state: directory
     suffix: grafana
+    path: /var/tmp
   register: __grafana_temp_dir
   when:
     - not __grafana_is_installed.stat.exists or
@@ -98,7 +100,7 @@
     src: "{{ __grafana_temp_dir.path }}/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
     dest: "{{ __grafana_temp_dir.path }}"
     remote_src: true
-    creates: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/bin/grafana-server"
+    creates: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/bin/grafana"
   when:
     - not __grafana_is_installed.stat.exists or
       (__grafana_current_version is defined and __grafana_current_version != grafana_version)
@@ -131,7 +133,7 @@
 - name: Copy grafana public files
   copy:
     src: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/public/"
-    dest: "/usr/share/grafana/public/"
+    dest: "{{ grafana_home_dir }}/public/"
     owner: "{{ grafana_user }}"
     group: "{{ grafana_group }}"
     mode: "0644"
@@ -142,7 +144,7 @@
 
 - name: Create grafana public directory
   file:
-    path: "/usr/share/grafana/public"
+    path: "{{ grafana_home_dir }}/public"
     state: directory
     owner: "{{ grafana_user }}"
     group: "{{ grafana_group }}"

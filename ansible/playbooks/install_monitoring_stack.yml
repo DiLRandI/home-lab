@@ -11,40 +11,50 @@
     - nginx
 
   post_tasks:
-    - name: Verify node_exporter is running
+    - name: Verify node_exporter is running (localhost only)
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port | default(9100) }}/metrics"
+        url: "http://127.0.0.1:{{ node_exporter_port | default(9100) }}/metrics"
         method: GET
         status_code: 200
       register: metrics_check
       retries: 3
       delay: 5
 
-    - name: Verify prometheus is running
+    - name: Verify prometheus is running (localhost only)
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port | default(9090) }}/-/ready"
+        url: "http://127.0.0.1:{{ prometheus_port | default(9090) }}/-/ready"
         method: GET
         status_code: 200
       register: prometheus_check
       retries: 5
       delay: 5
 
-    - name: Verify grafana is running
+    - name: Verify grafana is running (localhost only)
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ grafana_port | default(3000) }}/api/health"
+        url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/health"
         method: GET
         status_code: 200
       register: grafana_check
       retries: 5
       delay: 10
 
-    - name: Verify nginx is running and serving HTTPS
+    - name: Verify nginx is running and serving HTTPS (public access)
       uri:
         url: "https://{{ ansible_default_ipv4.address }}/nginx-health"
         method: GET
         status_code: 200
         validate_certs: false
       register: nginx_check
+      retries: 5
+      delay: 5
+
+    - name: Verify grafana is accessible through nginx (public access)
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}/api/health"
+        method: GET
+        status_code: 200
+        validate_certs: false
+      register: grafana_nginx_check
       retries: 5
       delay: 5
 
@@ -61,10 +71,11 @@
         - prometheus_check is succeeded
         - grafana_check is succeeded
         - nginx_check is succeeded
+        - grafana_nginx_check is succeeded
 
-    - name: Check prometheus targets
+    - name: Check prometheus targets (localhost only)
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port | default(9090) }}/api/v1/targets"
+        url: "http://127.0.0.1:{{ prometheus_port | default(9090) }}/api/v1/targets"
         method: GET
         status_code: 200
       register: targets_check
@@ -91,3 +102,4 @@
         - targets_check is succeeded
         - grafana_check is succeeded
         - nginx_check is succeeded
+        - grafana_nginx_check is succeeded

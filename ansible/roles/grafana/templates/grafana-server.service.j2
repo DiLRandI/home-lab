@@ -4,16 +4,16 @@ Description=Grafana Server
 Documentation=http://docs.grafana.org
 Wants=network-online.target
 After=network-online.target
-After=postgresql.service mariadb.service mysql.service
 
 [Service]
 Type=simple
 User={{ grafana_user }}
 Group={{ grafana_group }}
-ExecStart=/usr/local/bin/grafana-server \
+ExecStart=/usr/local/bin/grafana server \
   --config={{ grafana_config_file }} \
   --pidfile=/var/run/grafana/grafana-server.pid \
   --packaging=rpm \
+  --homepath={{ grafana_home_dir }} \
   cfg:default.paths.logs={{ grafana_logs_dir }} \
   cfg:default.paths.data={{ grafana_data_dir }} \
   cfg:default.paths.plugins={{ grafana_data_dir }}/plugins \

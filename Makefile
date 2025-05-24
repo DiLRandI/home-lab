@@ -1,5 +1,12 @@
 # Makefile
 
+# Default SSH key path, can be overridden with: make target ssh-key=/path/to/key.pem
+SSH_KEY_PATH ?= ~/.ssh/id_rsa
+# Allow 'ssh-key' as an alternative to SSH_KEY_PATH
+ifdef ssh-key
+    SSH_KEY_PATH = $(ssh-key)
+endif
+
 .PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-grafana run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy
 
 deploy:
@@ -22,9 +29,9 @@ update-inventory:
 	@echo "Retrieving public IP from CloudFormation stack..."
 	$(eval PUBLIC_IP := $(shell aws cloudformation describe-stacks --stack-name home-lab-stack --query 'Stacks[0].Outputs[?OutputKey==`PublicIp`].OutputValue' --output text))
 	@echo "Found public IP: $(PUBLIC_IP)"
-	@echo "Updating Ansible inventory..."
+	@echo "Updating Ansible inventory with SSH key: $(SSH_KEY_PATH)"
 	@echo "[monitoring]" > ansible/inventory/hosts
-	@echo "$(PUBLIC_IP) ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/id_rsa" >> ansible/inventory/hosts
+	@echo "$(PUBLIC_IP) ansible_user=ec2-user ansible_ssh_private_key_file=$(SSH_KEY_PATH)" >> ansible/inventory/hosts
 	@echo "Inventory updated with IP: $(PUBLIC_IP)"
 
 # Setup Ansible configuration and test connectivity
@@ -57,6 +64,7 @@ run-monitoring-stack:
 # Install all monitoring software (Prometheus + Node Exporter + Grafana)
 install-software: setup-ansible run-monitoring-stack
 	@echo "All monitoring software installation completed!"
+	@echo "Note: You can override the SSH key with: make install-software ssh-key=/path/to/key.pem"
 
 # Test Ansible connectivity
 test-ansible:

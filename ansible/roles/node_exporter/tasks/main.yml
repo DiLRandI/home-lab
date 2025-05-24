@@ -59,6 +59,7 @@
   tempfile:
     state: directory
     suffix: node_exporter
+    path: /var/tmp
   register: __node_exporter_temp_dir
   when:
     - not __node_exporter_is_installed.stat.exists or
