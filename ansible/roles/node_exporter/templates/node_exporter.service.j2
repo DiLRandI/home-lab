@@ -1,0 +1,28 @@
+[Unit]
+Description=Prometheus Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ node_exporter_user }}
+Group={{ node_exporter_group }}
+ExecStart=/usr/local/bin/node_exporter \
+{% for collector in node_exporter_enabled_collectors %}
+  --collector.{{ collector }} \
+{% endfor %}
+{% for collector in node_exporter_disabled_collectors %}
+  --no-collector.{{ collector }} \
+{% endfor %}
+{% for k,v in node_exporter_config_flags.items() %}
+  --{{ k }}={{ v }} \
+{% endfor %}
+  --web.listen-address={{ node_exporter_web_listen_address }}
+
+SyslogIdentifier=node_exporter
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target

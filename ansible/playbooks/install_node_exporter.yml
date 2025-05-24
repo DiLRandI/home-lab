@@ -1,0 +1,23 @@
+---
+- name: Install Node Exporter
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  roles:
+    - node_exporter
+
+  post_tasks:
+    - name: Verify node_exporter is running
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port }}/metrics"
+        method: GET
+        status_code: 200
+      register: metrics_check
+      retries: 3
+      delay: 5
+
+    - name: Display node_exporter status
+      debug:
+        msg: "Node Exporter version {{ node_exporter_version }} is running and accessible at http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port }}/metrics"
+      when: metrics_check is succeeded

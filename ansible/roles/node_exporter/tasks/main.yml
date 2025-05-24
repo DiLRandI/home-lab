@@ -1,0 +1,135 @@
+---
+- name: Detect system architecture
+  set_fact:
+    node_exporter_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+- name: Display detected architecture
+  debug:
+    msg: "Detected architecture: {{ ansible_architecture }} -> Using node_exporter arch: {{ node_exporter_arch }}"
+
+- name: Display node_exporter version
+  debug:
+    msg: "Installing node_exporter version: {{ node_exporter_version }}"
+
+- name: Create node_exporter group
+  group:
+    name: "{{ node_exporter_group }}"
+    system: true
+    state: present
+
+- name: Create node_exporter user
+  user:
+    name: "{{ node_exporter_user }}"
+    groups: "{{ node_exporter_group }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+    state: present
+
+- name: Check if node_exporter is installed
+  stat:
+    path: "/usr/local/bin/node_exporter"
+  register: __node_exporter_is_installed
+
+- name: Check current node_exporter version
+  command: /usr/local/bin/node_exporter --version
+  register: __node_exporter_current_version_output
+  when: __node_exporter_is_installed.stat.exists
+  changed_when: false
+  failed_when: false
+
+- name: Debug version output
+  debug:
+    var: __node_exporter_current_version_output
+  when: __node_exporter_is_installed.stat.exists
+
+- name: Parse current node_exporter version
+  set_fact:
+    __node_exporter_current_version: "{{ version_line.split(' ')[2] }}"
+  vars:
+    version_line: "{{ __node_exporter_current_version_output.stderr_lines[0] if __node_exporter_current_version_output.stderr_lines | length > 0 else __node_exporter_current_version_output.stdout_lines[0] }}"
+  when:
+    - __node_exporter_is_installed.stat.exists
+    - __node_exporter_current_version_output is defined
+    - (__node_exporter_current_version_output.stderr_lines | length > 0 or __node_exporter_current_version_output.stdout_lines | length > 0)
+
+- name: Create temporary directory
+  tempfile:
+    state: directory
+    suffix: node_exporter
+  register: __node_exporter_temp_dir
+  when:
+    - not __node_exporter_is_installed.stat.exists or
+      (__node_exporter_current_version is defined and __node_exporter_current_version != node_exporter_version)
+
+- name: Download node_exporter archive
+  get_url:
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+    dest: "{{ __node_exporter_temp_dir.path }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+    mode: "0644"
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+  when:
+    - not __node_exporter_is_installed.stat.exists or
+      (__node_exporter_current_version is defined and __node_exporter_current_version != node_exporter_version)
+
+- name: Unpack node_exporter archive
+  unarchive:
+    src: "{{ __node_exporter_temp_dir.path }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+    dest: "{{ __node_exporter_temp_dir.path }}"
+    remote_src: true
+    creates: "{{ __node_exporter_temp_dir.path }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
+  when:
+    - not __node_exporter_is_installed.stat.exists or
+      (__node_exporter_current_version is defined and __node_exporter_current_version != node_exporter_version)
+
+- name: Stop node_exporter service
+  systemd:
+    name: node_exporter
+    state: stopped
+  when:
+    - __node_exporter_is_installed.stat.exists
+    - (__node_exporter_current_version is defined and __node_exporter_current_version != node_exporter_version)
+
+- name: Install node_exporter binary
+  copy:
+    src: "{{ __node_exporter_temp_dir.path }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter"
+    dest: "/usr/local/bin/node_exporter"
+    mode: "0755"
+    owner: root
+    group: root
+    remote_src: true
+  notify: restart node_exporter
+  when:
+    - not __node_exporter_is_installed.stat.exists or
+      (__node_exporter_current_version is defined and __node_exporter_current_version != node_exporter_version)
+
+- name: Create node_exporter systemd service file
+  template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart node_exporter
+
+- name: Enable and start node_exporter service
+  systemd:
+    name: node_exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ __node_exporter_temp_dir.path }}"
+    state: absent
+  when:
+    - not __node_exporter_is_installed.stat.exists or
+      (__node_exporter_current_version is defined and __node_exporter_current_version != node_exporter_version)
