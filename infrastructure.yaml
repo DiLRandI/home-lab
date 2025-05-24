@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create an EC2 instance with a parameterized AMI
+
+Parameters:
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Description: AMI ID for the EC2 instance
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access
+
+Resources:
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: t4g.nano
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !GetAtt MySecurityGroup.GroupId
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          mkdir -p ~/.ssh
+          sudo curl https://github.com/dilrandi.keys >> ~/.ssh/authorized_keys
+
+Outputs:
+  PublicIp:
+    Description: The public IP address of the instance
+    Value: !GetAtt MyEC2Instance.PublicIp
+
+  PublicDnsName:
+    Description: The public DNS name of the instance
+    Value: !GetAtt MyEC2Instance.PublicDnsName

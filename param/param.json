@@ -1,0 +1,10 @@
+[
+    {
+        "ParameterKey": "AmiId",
+        "ParameterValue": "ami-094ead6eb0a3fed45"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "home-lab"
+    }
+]
