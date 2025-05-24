@@ -64,6 +64,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 ## 🎓 Learning Focus
 
 This project demonstrates:
+
 - Infrastructure as Code with CloudFormation
 - Configuration Management with Ansible
 - Monitoring stack deployment and configuration

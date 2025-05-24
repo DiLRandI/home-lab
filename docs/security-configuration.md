@@ -54,6 +54,7 @@ SecurityGroupIngress:
 ### Certificate Management
 
 **Self-Signed Certificate Generation**:
+
 ```bash
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout /etc/nginx/ssl/nginx-selfsigned.key \
@@ -62,6 +63,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 ```
 
 **Diffie-Hellman Parameters**:
+
 ```bash
 openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048
 ```
@@ -108,10 +110,12 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 ### Grafana Authentication
 
 **Default Credentials**:
+
 - Username: `admin`
 - Password: `admin`
 
 **Security Recommendations**:
+
 1. Change default password immediately after first login
 2. Create individual user accounts
 3. Disable admin user after creating alternative admin account
@@ -120,11 +124,13 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 ### SSH Access
 
 **Key-Based Authentication**:
+
 - Password authentication disabled
 - Public key authentication required
 - Keys managed via EC2 Key Pairs
 
 **SSH Hardening**:
+
 ```bash
 # Recommended SSH configuration
 PermitRootLogin no
@@ -170,12 +176,14 @@ auto_assign_org_role = Viewer
 ### Security Event Monitoring
 
 **Nginx Access Logs**:
+
 ```nginx
 access_log /var/log/nginx/access.log main;
 error_log /var/log/nginx/error.log;
 ```
 
 **System Logs**:
+
 ```bash
 # Monitor authentication attempts
 sudo journalctl -f -u ssh
@@ -190,6 +198,7 @@ sudo journalctl -f -t kernel
 ## Security Best Practices
 
 ### Regular Updates
+
 ```bash
 # Update system packages
 sudo yum update -y
@@ -199,12 +208,14 @@ sudo yum update -y
 ```
 
 ### Backup and Recovery
+
 - Regular configuration backups
 - Database exports from Grafana
 - Documentation of custom dashboards
 - SSH key backup and rotation
 
 ### Incident Response
+
 1. **Suspicious Activity Detection**:
    - Monitor nginx access logs
    - Check for failed SSH attempts
@@ -219,11 +230,13 @@ sudo yum update -y
 ## Compliance Considerations
 
 ### Data Protection
+
 - Metrics data stored locally only
 - No external data transmission
 - Self-contained monitoring environment
 
 ### Audit Trail
+
 - Nginx access logging enabled
 - System authentication logging
 - Service modification tracking via configuration management
@@ -231,12 +244,14 @@ sudo yum update -y
 ## Security Limitations
 
 ### Current Limitations
+
 - Self-signed certificates (browser warnings)
 - Basic Grafana authentication
 - No network segmentation beyond localhost binding
 - No intrusion detection system
 
 ### Production Recommendations
+
 - Use proper SSL certificates (Let's Encrypt, commercial CA)
 - Implement OAuth or LDAP authentication
 - Add fail2ban for SSH protection
