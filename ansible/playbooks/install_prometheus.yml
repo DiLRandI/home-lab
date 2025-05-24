@@ -1,0 +1,37 @@
+---
+- name: Install Prometheus
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  roles:
+    - prometheus
+
+  post_tasks:
+    - name: Verify prometheus is running
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/-/ready"
+        method: GET
+        status_code: 200
+      register: prometheus_check
+      retries: 5
+      delay: 5
+
+    - name: Display prometheus status
+      debug:
+        msg: "Prometheus version {{ prometheus_version }} is running and accessible at http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/"
+      when: prometheus_check is succeeded
+
+    - name: Check prometheus targets
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/api/v1/targets"
+        method: GET
+        status_code: 200
+      register: targets_check
+      retries: 3
+      delay: 5
+
+    - name: Display targets status
+      debug:
+        msg: "Prometheus targets are configured and accessible"
+      when: targets_check is succeeded

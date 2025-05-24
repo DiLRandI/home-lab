@@ -1,0 +1,45 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Grafana Server
+Documentation=http://docs.grafana.org
+Wants=network-online.target
+After=network-online.target
+After=postgresql.service mariadb.service mysql.service
+
+[Service]
+Type=simple
+User={{ grafana_user }}
+Group={{ grafana_group }}
+ExecStart=/usr/local/bin/grafana-server \
+  --config={{ grafana_config_file }} \
+  --pidfile=/var/run/grafana/grafana-server.pid \
+  --packaging=rpm \
+  cfg:default.paths.logs={{ grafana_logs_dir }} \
+  cfg:default.paths.data={{ grafana_data_dir }} \
+  cfg:default.paths.plugins={{ grafana_data_dir }}/plugins \
+  cfg:default.paths.provisioning={{ grafana_provisioning_dir }}
+
+WorkingDirectory={{ grafana_data_dir }}
+RuntimeDirectory=grafana
+RuntimeDirectoryMode=0755
+SyslogIdentifier=grafana-server
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+SendSIGKILL=no
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=10000
+
+# Specifies the maximum number of threads this process can create
+TasksMax=infinity
+
+# Disable timeout logic and wait until process is stopped
+TimeoutStopSec=0
+
+# SIGTERM signal is used to stop Grafana
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

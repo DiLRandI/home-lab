@@ -1,0 +1,218 @@
+---
+- name: Detect system architecture
+  set_fact:
+    grafana_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+- name: Display detected architecture
+  debug:
+    msg: "Detected architecture: {{ ansible_architecture }} -> Using grafana arch: {{ grafana_arch }}"
+
+- name: Display grafana version
+  debug:
+    msg: "Installing grafana version: {{ grafana_version }}"
+
+- name: Create grafana group
+  group:
+    name: "{{ grafana_group }}"
+    system: true
+    state: present
+
+- name: Create grafana user
+  user:
+    name: "{{ grafana_user }}"
+    groups: "{{ grafana_group }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: "{{ grafana_data_dir }}"
+    state: present
+
+- name: Create grafana directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0755"
+  loop:
+    - "{{ grafana_config_dir }}"
+    - "{{ grafana_data_dir }}"
+    - "{{ grafana_logs_dir }}"
+    - "{{ grafana_dashboards_dir }}"
+    - "{{ grafana_provisioning_dir }}"
+    - "{{ grafana_datasources_dir }}"
+    - "{{ grafana_dashboards_providers_dir }}"
+
+- name: Check if grafana is installed
+  stat:
+    path: "/usr/local/bin/grafana-server"
+  register: __grafana_is_installed
+
+- name: Check current grafana version
+  command: /usr/local/bin/grafana-server --version
+  register: __grafana_current_version_output
+  when: __grafana_is_installed.stat.exists
+  changed_when: false
+  failed_when: false
+
+- name: Debug version output
+  debug:
+    var: __grafana_current_version_output
+  when: __grafana_is_installed.stat.exists
+
+- name: Parse current grafana version
+  set_fact:
+    __grafana_current_version: "{{ version_line.split(' ')[1] }}"
+  vars:
+    version_line: "{{ __grafana_current_version_output.stdout_lines[0] if __grafana_current_version_output.stdout_lines | length > 0 else __grafana_current_version_output.stderr_lines[0] }}"
+  when:
+    - __grafana_is_installed.stat.exists
+    - __grafana_current_version_output is defined
+    - (__grafana_current_version_output.stderr_lines | length > 0 or __grafana_current_version_output.stdout_lines | length > 0)
+
+- name: Create temporary directory
+  tempfile:
+    state: directory
+    suffix: grafana
+  register: __grafana_temp_dir
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Download grafana archive
+  get_url:
+    url: "https://github.com/grafana/grafana/releases/download/v{{ grafana_version }}/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
+    dest: "{{ __grafana_temp_dir.path }}/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
+    mode: "0644"
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Unpack grafana archive
+  unarchive:
+    src: "{{ __grafana_temp_dir.path }}/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
+    dest: "{{ __grafana_temp_dir.path }}"
+    remote_src: true
+    creates: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/bin/grafana-server"
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Stop grafana service
+  systemd:
+    name: grafana-server
+    state: stopped
+  when:
+    - __grafana_is_installed.stat.exists
+    - (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Install grafana binaries
+  copy:
+    src: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: "0755"
+    owner: root
+    group: root
+    remote_src: true
+  loop:
+    - grafana-server
+    - grafana-cli
+  notify: restart grafana
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Copy grafana public files
+  copy:
+    src: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/public/"
+    dest: "/usr/share/grafana/public/"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+    remote_src: true
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Create grafana public directory
+  file:
+    path: "/usr/share/grafana/public"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0755"
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Create grafana configuration file
+  template:
+    src: grafana.ini.j2
+    dest: "{{ grafana_config_file }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+    backup: true
+  notify:
+    - restart grafana
+
+- name: Create grafana systemd service file
+  template:
+    src: grafana-server.service.j2
+    dest: /etc/systemd/system/grafana-server.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart grafana
+
+- name: Create datasources provisioning file
+  template:
+    src: datasources.yml.j2
+    dest: "{{ grafana_datasources_dir }}/datasources.yml"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+  notify:
+    - restart grafana
+
+- name: Create dashboards provisioning file
+  template:
+    src: dashboards.yml.j2
+    dest: "{{ grafana_dashboards_providers_dir }}/dashboards.yml"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+  notify:
+    - restart grafana
+
+- name: Copy default dashboard files
+  copy:
+    src: "dashboards/"
+    dest: "{{ grafana_dashboards_dir }}/"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+  notify:
+    - restart grafana
+
+- name: Enable and start grafana service
+  systemd:
+    name: grafana-server
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ __grafana_temp_dir.path }}"
+    state: absent
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)

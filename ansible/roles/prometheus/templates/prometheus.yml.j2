@@ -1,0 +1,87 @@
+# {{ ansible_managed }}
+# Prometheus configuration file
+
+global:
+{% for key, value in prometheus_global.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+
+{% if prometheus_rule_files %}
+rule_files:
+{% for rule_file in prometheus_rule_files %}
+  - "{{ rule_file }}"
+{% endfor %}
+{% endif %}
+
+{% if prometheus_alerting.alertmanagers %}
+alerting:
+  alertmanagers:
+{% for alertmanager in prometheus_alerting.alertmanagers %}
+    - {{ alertmanager | to_nice_yaml | indent(6) }}
+{% endfor %}
+{% endif %}
+
+scrape_configs:
+{% for scrape_config in prometheus_scrape_configs %}
+  - job_name: "{{ scrape_config.job_name }}"
+{% if scrape_config.scrape_interval is defined %}
+    scrape_interval: {{ scrape_config.scrape_interval }}
+{% endif %}
+{% if scrape_config.scrape_timeout is defined %}
+    scrape_timeout: {{ scrape_config.scrape_timeout }}
+{% endif %}
+{% if scrape_config.metrics_path is defined %}
+    metrics_path: {{ scrape_config.metrics_path }}
+{% endif %}
+{% if scrape_config.scheme is defined %}
+    scheme: {{ scrape_config.scheme }}
+{% endif %}
+{% if scrape_config.static_configs is defined %}
+    static_configs:
+{% for static_config in scrape_config.static_configs %}
+      - targets:
+{% for target in static_config.targets %}
+          - "{{ target }}"
+{% endfor %}
+{% if static_config.labels is defined %}
+        labels:
+{% for key, value in static_config.labels.items() %}
+          {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if scrape_config.file_sd_configs is defined %}
+    file_sd_configs:
+{% for file_sd_config in scrape_config.file_sd_configs %}
+      - files:
+{% for file in file_sd_config.files %}
+          - "{{ file }}"
+{% endfor %}
+{% if file_sd_config.refresh_interval is defined %}
+        refresh_interval: {{ file_sd_config.refresh_interval }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if scrape_config.relabel_configs is defined %}
+    relabel_configs:
+{% for relabel_config in scrape_config.relabel_configs %}
+      - {{ relabel_config | to_nice_yaml | indent(8) }}
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+{% if prometheus_remote_write %}
+remote_write:
+{% for remote_write_config in prometheus_remote_write %}
+  - {{ remote_write_config | to_nice_yaml | indent(4) }}
+{% endfor %}
+{% endif %}
+
+{% if prometheus_remote_read %}
+remote_read:
+{% for remote_read_config in prometheus_remote_read %}
+  - {{ remote_read_config | to_nice_yaml | indent(4) }}
+{% endfor %}
+{% endif %}

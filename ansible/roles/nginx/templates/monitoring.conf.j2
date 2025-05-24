@@ -1,0 +1,91 @@
+# {{ ansible_managed }}
+# Monitoring Stack Reverse Proxy Configuration
+
+# Upstream for Grafana
+upstream grafana_backend {
+    server {{ grafana_backend_host }}:{{ grafana_backend_port }};
+}
+
+# Upstream for Prometheus (internal access only)
+upstream prometheus_backend {
+    server {{ prometheus_backend_host }}:{{ prometheus_backend_port }};
+}
+
+# HTTP Server - Redirect to HTTPS
+server {
+    listen {{ nginx_port_http }};
+    server_name {{ nginx_server_name }};
+    
+    # Redirect all HTTP requests to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+# HTTPS Server - Main Grafana Interface
+server {
+    listen {{ nginx_port_https }} ssl http2;
+    server_name {{ nginx_server_name }};
+
+    # SSL Configuration
+    ssl_certificate {{ nginx_ssl_certificate }};
+    ssl_certificate_key {{ nginx_ssl_certificate_key }};
+    ssl_dhparam {{ nginx_ssl_dhparam }};
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Root location - Grafana
+    location / {
+        proxy_pass http://grafana_backend;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_http_version 1.1;
+        proxy_intercept_errors on;
+        
+        # WebSocket support for live updates
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Increase timeouts for long-running queries
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Prometheus API access (internal monitoring only)
+    # Uncomment the following if you need internal API access
+    # location /prometheus/ {
+    #     proxy_pass http://prometheus_backend/;
+    #     proxy_set_header Host $http_host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    #     
+    #     # Restrict access to localhost only
+    #     allow 127.0.0.1;
+    #     deny all;
+    # }
+
+    # Health check endpoint
+    location /nginx-health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Error pages
+    error_page 404 /404.html;
+    error_page 500 502 503 504 /50x.html;
+    
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}

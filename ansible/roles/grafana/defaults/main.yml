@@ -1,0 +1,44 @@
+---
+# Grafana Role Defaults
+# Version of grafana to install
+# Check available versions at: https://github.com/grafana/grafana/releases
+grafana_version: "12.0.1"
+grafana_user: "grafana"
+grafana_group: "grafana"
+grafana_port: 3000
+grafana_data_dir: "/var/lib/grafana"
+grafana_logs_dir: "/var/log/grafana"
+grafana_config_dir: "/etc/grafana"
+grafana_config_file: "{{ grafana_config_dir }}/grafana.ini"
+grafana_dashboards_dir: "{{ grafana_config_dir }}/dashboards"
+grafana_provisioning_dir: "{{ grafana_config_dir }}/provisioning"
+grafana_datasources_dir: "{{ grafana_provisioning_dir }}/datasources"
+grafana_dashboards_providers_dir: "{{ grafana_provisioning_dir }}/dashboards"
+
+# Grafana configuration
+grafana_admin_user: "admin"
+grafana_admin_password: "admin"
+grafana_domain: "localhost"
+grafana_root_url: "http://{{ grafana_domain }}:{{ grafana_port }}/"
+
+# Default Prometheus datasource
+grafana_datasources:
+  - name: "Prometheus"
+    type: "prometheus"
+    access: "proxy"
+    url: "http://localhost:9090"
+    isDefault: true
+    basicAuth: false
+    editable: true
+
+# Dashboard providers
+grafana_dashboard_providers:
+  - name: "Default"
+    orgId: 1
+    folder: ""
+    type: "file"
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: "{{ grafana_dashboards_dir }}"

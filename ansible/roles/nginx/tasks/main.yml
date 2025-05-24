@@ -1,0 +1,91 @@
+---
+- name: Install nginx
+  package:
+    name: nginx
+    state: present
+
+- name: Create nginx ssl directory
+  file:
+    path: "{{ nginx_ssl_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Generate self-signed SSL certificate
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout {{ nginx_ssl_certificate_key }}
+    -out {{ nginx_ssl_certificate }}
+    -subj "/C=US/ST=Local/L=Local/O=HomeLabOrg/OU=IT/CN={{ ansible_default_ipv4.address }}"
+  args:
+    creates: "{{ nginx_ssl_certificate }}"
+
+- name: Generate dhparam file
+  command: openssl dhparam -out {{ nginx_ssl_dhparam }} 2048
+  args:
+    creates: "{{ nginx_ssl_dhparam }}"
+
+- name: Create sites-available directory
+  file:
+    path: "{{ nginx_sites_available_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create sites-enabled directory
+  file:
+    path: "{{ nginx_sites_enabled_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Remove default nginx site
+  file:
+    path: "{{ nginx_config_dir }}/sites-enabled/default"
+    state: absent
+  notify: restart nginx
+
+- name: Configure main nginx.conf
+  template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_config_dir }}/nginx.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: restart nginx
+
+- name: Configure monitoring site
+  template:
+    src: monitoring.conf.j2
+    dest: "{{ nginx_sites_available_dir }}/monitoring"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nginx
+
+- name: Enable monitoring site
+  file:
+    src: "{{ nginx_sites_available_dir }}/monitoring"
+    dest: "{{ nginx_sites_enabled_dir }}/monitoring"
+    state: link
+  notify: restart nginx
+
+- name: Start and enable nginx service
+  systemd:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Verify nginx configuration
+  command: nginx -t
+  register: nginx_syntax_check
+  changed_when: false
+
+- name: Display nginx status
+  debug:
+    msg: "Nginx configuration is valid and service is running"
+  when: nginx_syntax_check.rc == 0

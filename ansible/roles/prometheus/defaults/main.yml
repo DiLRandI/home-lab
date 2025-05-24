@@ -1,0 +1,35 @@
+---
+# Prometheus Role Defaults
+# Version of prometheus to install
+# Check available versions at: https://github.com/prometheus/prometheus/releases
+prometheus_version: "2.54.1"
+prometheus_user: "prometheus"
+prometheus_group: "prometheus"
+prometheus_port: 9090
+prometheus_web_listen_address: "127.0.0.1:{{ prometheus_port }}"
+prometheus_data_dir: "/var/lib/prometheus"
+prometheus_config_dir: "/etc/prometheus"
+prometheus_config_file: "{{ prometheus_config_dir }}/prometheus.yml"
+prometheus_storage_retention: "15d"
+prometheus_storage_retention_size: "0"
+prometheus_web_console_templates: "{{ prometheus_config_dir }}/consoles"
+prometheus_web_console_libraries: "{{ prometheus_config_dir }}/console_libraries"
+prometheus_alertmanager_config: []
+prometheus_global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+prometheus_rule_files: []
+prometheus_scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"
+  - job_name: "node"
+    static_configs:
+      - targets:
+          - "localhost:9100"
+prometheus_alerting:
+  alertmanagers: []
+prometheus_remote_write: []
+prometheus_remote_read: []

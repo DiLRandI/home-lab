@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: deploy install-ansible setup-ansible run-ansible test-ansible update-inventory
+.PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy
 
 deploy:
 	aws cloudformation deploy \
@@ -39,11 +39,29 @@ run-ansible:
 	@echo "Running Ansible playbook to install node_exporter..."
 	cd ansible && ansible-playbook playbooks/install_node_exporter.yml
 
+# Run the prometheus installation playbook
+run-prometheus:
+	@echo "Running Ansible playbook to install prometheus..."
+	cd ansible && ansible-playbook playbooks/install_prometheus.yml
+
+# Run the complete monitoring stack installation playbook
+run-monitoring-stack:
+	@echo "Running Ansible playbook to install monitoring stack (Prometheus + Node Exporter + Grafana)..."
+	cd ansible && ansible-playbook playbooks/install_monitoring_stack.yml
+
+# Install all monitoring software (Prometheus + Node Exporter + Grafana)
+install-software: setup-ansible run-monitoring-stack
+	@echo "All monitoring software installation completed!"
+
 # Test Ansible connectivity
 test-ansible:
 	@echo "Testing Ansible connectivity to all hosts..."
 	cd ansible && ansible all -m ping
 
 # Complete Ansible setup and deployment
-ansible-deploy: setup-ansible run-ansible
+ansible-deploy: setup-ansible run-monitoring-stack
 	@echo "Ansible deployment completed!"
+
+# Complete monitoring stack deployment
+monitoring-deploy: setup-ansible run-monitoring-stack
+	@echo "Monitoring stack deployment completed!"

@@ -1,36 +1,71 @@
-# home-lab
+# Home Lab Monitoring Stack
 
-This project provides an AWS CloudFormation template and supporting files to deploy a minimal home lab monitoring stack on an EC2 instance. The stack includes:
+A secure, automated monitoring solution deployed on AWS with Prometheus, Grafana, and Node Exporter.
 
-- **Grafana**: For visualization and dashboards
-- **Prometheus**: For metrics collection and monitoring
-- **Node Exporter**: For exposing Linux system metrics to Prometheus
+## 🎯 Quick Start
 
-## Structure
+```bash
+# 1. Deploy AWS infrastructure
+make deploy
 
-- `infrastructure.yaml`: Main CloudFormation template to provision the EC2 instance, security group, and install all monitoring components using UserData.
-- `param/param.json`: Parameter file in AWS format, used to provide stack parameters (AMI ID, Grafana version, etc.)
-- `Makefile`: Contains a `deploy` target to deploy the stack using AWS CLI and the parameter file.
+# 2. Install monitoring stack  
+make install-software
 
-## Usage
+# 3. Access Grafana
+# https://your-ec2-ip/ (admin/admin)
+```
 
-1. **Edit Parameters**
-   - Update `param/param.json` with your desired AMI ID and Grafana version.
+## 🏗️ Architecture
 
-2. **Deploy the Stack**
-   - Run `make deploy` to deploy the stack to AWS. This uses the AWS CLI and requires appropriate credentials and permissions.
+- **Infrastructure**: AWS EC2 with CloudFormation
+- **Monitoring**: Prometheus + Grafana + Node Exporter  
+- **Security**: Nginx reverse proxy with SSL/TLS
+- **Automation**: Ansible configuration management
 
-3. **Access**
-   - After deployment, the public IP and DNS of the instance will be available as stack outputs. Use these to access Grafana and Prometheus web interfaces.
+## 🔧 Available Commands
 
-## Requirements
+| Command | Description |
+|---------|-------------|
+| `make deploy` | Deploy AWS infrastructure |
+| `make install-software` | Install complete monitoring stack |
+| `make setup-ansible` | Configure Ansible connectivity |
+| `make test-ansible` | Test Ansible connectivity |
 
-- AWS CLI installed and configured
-- `make` utility
-- An appropriate ARM64 AMI for the EC2 instance (e.g., Amazon Linux 2 ARM64)
+## 🔒 Security Features
 
-## Notes
+- **Localhost-only services**: All monitoring services bound to 127.0.0.1
+- **SSL termination**: Nginx handles HTTPS with self-signed certificates
+- **Minimal exposure**: Only ports 22, 80, 443 accessible externally
+- **Security headers**: HSTS, CSP, and other security headers implemented
 
-- The EC2 instance is configured to allow SSH from anywhere (port 22 open to 0.0.0.0/0). For production, restrict this as needed.
-- The UserData script installs all components and sets up systemd services for Grafana, Prometheus, and Node Exporter.
-- The stack is intended for learning and home lab use.
+## 📊 Access Points
+
+- **Grafana Dashboard**: `https://your-ec2-ip/` (admin/admin)
+- **SSH Access**: `ssh -i ~/.ssh/id_rsa ec2-user@your-ec2-ip`
+
+> **Note**: Prometheus and Node Exporter are accessible only via Grafana datasource configuration (localhost only).
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[🚀 Infrastructure & Deployment](docs/infrastructure-deployment.md)** - AWS setup, CloudFormation, deployment
+- **[🔧 Ansible Configuration](docs/ansible-setup.md)** - Automation, roles, configuration management  
+- **[📊 Dashboard Management](docs/dashboard-management.md)** - Grafana dashboards, customization
+- **[🔒 Security Configuration](docs/security-configuration.md)** - Security architecture, hardening
+
+## 🛠️ Requirements
+
+- AWS CLI configured with appropriate permissions
+- Ansible installed
+- SSH key pair for EC2 access
+- Make utility
+
+## 🎓 Learning Focus
+
+This project demonstrates:
+- Infrastructure as Code with CloudFormation
+- Configuration Management with Ansible
+- Monitoring stack deployment and configuration
+- Security best practices for web applications
+- Reverse proxy configuration with Nginx

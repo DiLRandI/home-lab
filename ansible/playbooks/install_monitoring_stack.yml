@@ -1,0 +1,93 @@
+---
+- name: Install Monitoring Stack (Prometheus + Node Exporter + Grafana)
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  roles:
+    - node_exporter
+    - prometheus
+    - grafana
+    - nginx
+
+  post_tasks:
+    - name: Verify node_exporter is running
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port }}/metrics"
+        method: GET
+        status_code: 200
+      register: metrics_check
+      retries: 3
+      delay: 5
+
+    - name: Verify prometheus is running
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/-/ready"
+        method: GET
+        status_code: 200
+      register: prometheus_check
+      retries: 5
+      delay: 5
+
+    - name: Verify grafana is running
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/health"
+        method: GET
+        status_code: 200
+      register: grafana_check
+      retries: 5
+      delay: 10
+
+    - name: Verify nginx is running and serving HTTPS
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}/nginx-health"
+        method: GET
+        status_code: 200
+        validate_certs: false
+      register: nginx_check
+      retries: 5
+      delay: 5
+
+    - name: Display monitoring stack status
+      debug:
+        msg: |
+          Monitoring stack successfully installed:
+          - Node Exporter {{ node_exporter_version }} running at http://localhost:{{ node_exporter_port }}/metrics (localhost only)
+          - Prometheus {{ prometheus_version }} running at http://localhost:{{ prometheus_port }}/ (localhost only)
+          - Grafana {{ grafana_version }} running at http://localhost:{{ grafana_port }}/ (localhost only)
+          - Nginx reverse proxy running at https://{{ ansible_default_ipv4.address }}/ (public access)
+      when: 
+        - metrics_check is succeeded
+        - prometheus_check is succeeded
+        - grafana_check is succeeded
+        - nginx_check is succeeded
+
+    - name: Check prometheus targets
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/api/v1/targets"
+        method: GET
+        status_code: 200
+      register: targets_check
+      retries: 3
+      delay: 5
+
+    - name: Display access information
+      debug:
+        msg: |
+          Access your monitoring:
+          - Grafana Web UI: https://{{ ansible_default_ipv4.address }}/ (admin/admin)
+          - Nginx Health Check: https://{{ ansible_default_ipv4.address }}/nginx-health
+          
+          Internal services (localhost only):
+          - Prometheus Web UI: http://localhost:{{ prometheus_port }}/
+          - Node Exporter Metrics: http://localhost:{{ node_exporter_port }}/metrics
+          - Prometheus Targets: http://localhost:{{ prometheus_port }}/targets
+          - Grafana Direct Access: http://localhost:{{ grafana_port }}/
+          
+          Dashboard JSON files location: {{ grafana_dashboards_dir }}
+          
+          Security: All monitoring services are bound to localhost and accessible only via nginx reverse proxy.
+      when: 
+        - targets_check is succeeded
+        - grafana_check is succeeded
+        - nginx_check is succeeded

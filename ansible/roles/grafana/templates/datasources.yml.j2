@@ -1,0 +1,42 @@
+# {{ ansible_managed }}
+# Grafana datasources provisioning file
+
+apiVersion: 1
+
+datasources:
+{% for datasource in grafana_datasources %}
+  - name: {{ datasource.name }}
+    type: {{ datasource.type }}
+    access: {{ datasource.access }}
+    url: {{ datasource.url }}
+    isDefault: {{ datasource.isDefault | lower }}
+    basicAuth: {{ datasource.basicAuth | lower }}
+    editable: {{ datasource.editable | lower }}
+{% if datasource.basicAuthUser is defined %}
+    basicAuthUser: {{ datasource.basicAuthUser }}
+{% endif %}
+{% if datasource.basicAuthPassword is defined %}
+    basicAuthPassword: {{ datasource.basicAuthPassword }}
+{% endif %}
+{% if datasource.database is defined %}
+    database: {{ datasource.database }}
+{% endif %}
+{% if datasource.user is defined %}
+    user: {{ datasource.user }}
+{% endif %}
+{% if datasource.password is defined %}
+    password: {{ datasource.password }}
+{% endif %}
+{% if datasource.jsonData is defined %}
+    jsonData:
+{% for key, value in datasource.jsonData.items() %}
+      {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% if datasource.secureJsonData is defined %}
+    secureJsonData:
+{% for key, value in datasource.secureJsonData.items() %}
+      {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% endfor %}

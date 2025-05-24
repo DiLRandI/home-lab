@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Prometheus Server
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ prometheus_user }}
+Group={{ prometheus_group }}
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/prometheus \
+  --config.file={{ prometheus_config_file }} \
+  --storage.tsdb.path={{ prometheus_data_dir }} \
+  --storage.tsdb.retention.time={{ prometheus_storage_retention }} \
+{% if prometheus_storage_retention_size != "0" %}
+  --storage.tsdb.retention.size={{ prometheus_storage_retention_size }} \
+{% endif %}
+  --web.console.templates={{ prometheus_web_console_templates }} \
+  --web.console.libraries={{ prometheus_web_console_libraries }} \
+  --web.listen-address={{ prometheus_web_listen_address }} \
+  --web.external-url=http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/ \
+  --web.enable-lifecycle
+
+SyslogIdentifier=prometheus
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+SendSIGKILL=no
+
+[Install]
+WantedBy=multi-user.target

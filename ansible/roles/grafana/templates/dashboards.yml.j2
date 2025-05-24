@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+# Grafana dashboards provisioning file
+
+apiVersion: 1
+
+providers:
+{% for provider in grafana_dashboard_providers %}
+  - name: {{ provider.name }}
+    orgId: {{ provider.orgId }}
+    folder: "{{ provider.folder }}"
+    type: {{ provider.type }}
+    disableDeletion: {{ provider.disableDeletion | lower }}
+    updateIntervalSeconds: {{ provider.updateIntervalSeconds }}
+    allowUiUpdates: {{ provider.allowUiUpdates | lower }}
+    options:
+      path: {{ provider.options.path }}
+{% endfor %}

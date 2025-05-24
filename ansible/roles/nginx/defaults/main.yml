@@ -1,0 +1,26 @@
+---
+# Nginx Role Defaults
+nginx_user: "nginx"
+nginx_group: "nginx"
+nginx_port_http: 80
+nginx_port_https: 443
+nginx_config_dir: "/etc/nginx"
+nginx_sites_available_dir: "{{ nginx_config_dir }}/sites-available"
+nginx_sites_enabled_dir: "{{ nginx_config_dir }}/sites-enabled"
+nginx_log_dir: "/var/log/nginx"
+nginx_ssl_dir: "{{ nginx_config_dir }}/ssl"
+
+# Backend services
+grafana_backend_host: "127.0.0.1"
+grafana_backend_port: 3000
+prometheus_backend_host: "127.0.0.1"
+prometheus_backend_port: 9090
+
+# SSL Configuration
+nginx_ssl_certificate: "{{ nginx_ssl_dir }}/nginx-selfsigned.crt"
+nginx_ssl_certificate_key: "{{ nginx_ssl_dir }}/nginx-selfsigned.key"
+nginx_ssl_dhparam: "{{ nginx_ssl_dir }}/dhparam.pem"
+
+# Server configuration
+nginx_server_name: "_"  # Default server, matches any hostname
+nginx_client_max_body_size: "50M"

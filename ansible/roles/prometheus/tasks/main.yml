@@ -1,0 +1,186 @@
+---
+- name: Detect system architecture
+  set_fact:
+    prometheus_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+- name: Display detected architecture
+  debug:
+    msg: "Detected architecture: {{ ansible_architecture }} -> Using prometheus arch: {{ prometheus_arch }}"
+
+- name: Display prometheus version
+  debug:
+    msg: "Installing prometheus version: {{ prometheus_version }}"
+
+- name: Create prometheus group
+  group:
+    name: "{{ prometheus_group }}"
+    system: true
+    state: present
+
+- name: Create prometheus user
+  user:
+    name: "{{ prometheus_user }}"
+    groups: "{{ prometheus_group }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+    state: present
+
+- name: Create prometheus directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+  loop:
+    - "{{ prometheus_config_dir }}"
+    - "{{ prometheus_data_dir }}"
+    - "{{ prometheus_web_console_templates }}"
+    - "{{ prometheus_web_console_libraries }}"
+
+- name: Check if prometheus is installed
+  stat:
+    path: "/usr/local/bin/prometheus"
+  register: __prometheus_is_installed
+
+- name: Check current prometheus version
+  command: /usr/local/bin/prometheus --version
+  register: __prometheus_current_version_output
+  when: __prometheus_is_installed.stat.exists
+  changed_when: false
+  failed_when: false
+
+- name: Debug version output
+  debug:
+    var: __prometheus_current_version_output
+  when: __prometheus_is_installed.stat.exists
+
+- name: Parse current prometheus version
+  set_fact:
+    __prometheus_current_version: "{{ version_line.split(' ')[2] }}"
+  vars:
+    version_line: "{{ __prometheus_current_version_output.stderr_lines[0] if __prometheus_current_version_output.stderr_lines | length > 0 else __prometheus_current_version_output.stdout_lines[0] }}"
+  when:
+    - __prometheus_is_installed.stat.exists
+    - __prometheus_current_version_output is defined
+    - (__prometheus_current_version_output.stderr_lines | length > 0 or __prometheus_current_version_output.stdout_lines | length > 0)
+
+- name: Create temporary directory
+  tempfile:
+    state: directory
+    suffix: prometheus
+  register: __prometheus_temp_dir
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Download prometheus archive
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}.tar.gz"
+    dest: "{{ __prometheus_temp_dir.path }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}.tar.gz"
+    mode: "0644"
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Unpack prometheus archive
+  unarchive:
+    src: "{{ __prometheus_temp_dir.path }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}.tar.gz"
+    dest: "{{ __prometheus_temp_dir.path }}"
+    remote_src: true
+    creates: "{{ __prometheus_temp_dir.path }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}/prometheus"
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Stop prometheus service
+  systemd:
+    name: prometheus
+    state: stopped
+  when:
+    - __prometheus_is_installed.stat.exists
+    - (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Install prometheus binaries
+  copy:
+    src: "{{ __prometheus_temp_dir.path }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: "0755"
+    owner: root
+    group: root
+    remote_src: true
+  loop:
+    - prometheus
+    - promtool
+  notify: restart prometheus
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Install prometheus console templates
+  copy:
+    src: "{{ __prometheus_temp_dir.path }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}/consoles/"
+    dest: "{{ prometheus_web_console_templates }}/"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0644"
+    remote_src: true
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Install prometheus console libraries
+  copy:
+    src: "{{ __prometheus_temp_dir.path }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}/console_libraries/"
+    dest: "{{ prometheus_web_console_libraries }}/"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0644"
+    remote_src: true
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
+
+- name: Create prometheus configuration file
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_config_file }}"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0644"
+    backup: true
+  notify:
+    - reload prometheus
+
+- name: Create prometheus systemd service file
+  template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart prometheus
+
+- name: Enable and start prometheus service
+  systemd:
+    name: prometheus
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ __prometheus_temp_dir.path }}"
+    state: absent
+  when:
+    - not __prometheus_is_installed.stat.exists or
+      (__prometheus_current_version is defined and __prometheus_current_version != prometheus_version)
