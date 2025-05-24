@@ -13,7 +13,7 @@ The Ansible setup provides automated deployment of:
 
 ## Directory Structure
 
-```
+```text
 ansible/
 ├── ansible.cfg              # Ansible configuration
 ├── group_vars/
@@ -38,9 +38,9 @@ ansible/
 All software versions are centrally managed in `group_vars/monitoring.yml`:
 
 ```yaml
-node_exporter_version: "1.9.1"
-prometheus_version: "3.4.0" 
-grafana_version: "11.4.0"
+node_exporter_version: "1.8.2"
+prometheus_version: "2.54.1" 
+grafana_version: "12.0.1"
 ```
 
 ### Network Configuration
@@ -64,6 +64,9 @@ ansible-playbook playbooks/install_monitoring_stack.yml
 ```bash
 # Prometheus only
 ansible-playbook playbooks/install_prometheus.yml
+
+# Grafana only
+ansible-playbook playbooks/install_grafana.yml
 
 # Node Exporter only  
 ansible-playbook playbooks/install_node_exporter.yml

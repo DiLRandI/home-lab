@@ -39,11 +39,20 @@ Resources:
       KeyName: !Ref KeyName
       SecurityGroupIds:
         - !GetAtt MySecurityGroup.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
       UserData:
         Fn::Base64: |
           #!/bin/bash
           mkdir -p ~/.ssh
-          sudo curl https://github.com/dilrandi.keys >> ~/.ssh/authorized_keys
+          curl https://github.com/dilrandi.keys >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+          chmod 700 ~/.ssh
 
 Outputs:
   PublicIp:

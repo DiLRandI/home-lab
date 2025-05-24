@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy
+.PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-grafana run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy
 
 deploy:
 	aws cloudformation deploy \
@@ -43,6 +43,11 @@ run-ansible:
 run-prometheus:
 	@echo "Running Ansible playbook to install prometheus..."
 	cd ansible && ansible-playbook playbooks/install_prometheus.yml
+
+# Run the grafana installation playbook
+run-grafana:
+	@echo "Running Ansible playbook to install grafana..."
+	cd ansible && ansible-playbook playbooks/install_grafana.yml
 
 # Run the complete monitoring stack installation playbook
 run-monitoring-stack:

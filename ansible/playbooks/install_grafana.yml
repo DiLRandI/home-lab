@@ -1,0 +1,40 @@
+---
+- name: Install Grafana
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  roles:
+    - grafana
+
+  post_tasks:
+    - name: Verify grafana is running
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ grafana_port | default(3000) }}/api/health"
+        method: GET
+        status_code: 200
+      register: grafana_check
+      retries: 5
+      delay: 5
+
+    - name: Display grafana status
+      debug:
+        msg: "Grafana version {{ grafana_version }} is running and accessible at http://{{ ansible_default_ipv4.address }}:{{ grafana_port | default(3000) }}/"
+      when: grafana_check is succeeded
+
+    - name: Check grafana admin API
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ grafana_port | default(3000) }}/api/admin/stats"
+        method: GET
+        status_code: 200
+        user: "{{ grafana_admin_user }}"
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: yes
+      register: admin_check
+      retries: 3
+      delay: 5
+
+    - name: Display admin API status
+      debug:
+        msg: "Grafana admin API is accessible and working"
+      when: admin_check is succeeded

@@ -82,7 +82,7 @@
 
 - name: Download grafana archive
   get_url:
-    url: "https://github.com/grafana/grafana/releases/download/v{{ grafana_version }}/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
+    url: "https://dl.grafana.com/oss/release/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
     dest: "{{ __grafana_temp_dir.path }}/grafana-{{ grafana_version }}.linux-{{ grafana_arch }}.tar.gz"
     mode: "0644"
   register: _download_archive
@@ -120,6 +120,7 @@
     group: root
     remote_src: true
   loop:
+    - grafana
     - grafana-server
     - grafana-cli
   notify: restart grafana

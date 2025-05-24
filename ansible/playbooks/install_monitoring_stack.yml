@@ -13,7 +13,7 @@
   post_tasks:
     - name: Verify node_exporter is running
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port }}/metrics"
+        url: "http://{{ ansible_default_ipv4.address }}:{{ node_exporter_port | default(9100) }}/metrics"
         method: GET
         status_code: 200
       register: metrics_check
@@ -22,7 +22,7 @@
 
     - name: Verify prometheus is running
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/-/ready"
+        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port | default(9090) }}/-/ready"
         method: GET
         status_code: 200
       register: prometheus_check
@@ -31,7 +31,7 @@
 
     - name: Verify grafana is running
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/health"
+        url: "http://{{ ansible_default_ipv4.address }}:{{ grafana_port | default(3000) }}/api/health"
         method: GET
         status_code: 200
       register: grafana_check
@@ -52,9 +52,9 @@
       debug:
         msg: |
           Monitoring stack successfully installed:
-          - Node Exporter {{ node_exporter_version }} running at http://localhost:{{ node_exporter_port }}/metrics (localhost only)
-          - Prometheus {{ prometheus_version }} running at http://localhost:{{ prometheus_port }}/ (localhost only)
-          - Grafana {{ grafana_version }} running at http://localhost:{{ grafana_port }}/ (localhost only)
+          - Node Exporter {{ node_exporter_version }} running at http://localhost:{{ node_exporter_port | default(9100) }}/metrics (localhost only)
+          - Prometheus {{ prometheus_version }} running at http://localhost:{{ prometheus_port | default(9090) }}/ (localhost only)
+          - Grafana {{ grafana_version }} running at http://localhost:{{ grafana_port | default(3000) }}/ (localhost only)
           - Nginx reverse proxy running at https://{{ ansible_default_ipv4.address }}/ (public access)
       when: 
         - metrics_check is succeeded
@@ -64,7 +64,7 @@
 
     - name: Check prometheus targets
       uri:
-        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port }}/api/v1/targets"
+        url: "http://{{ ansible_default_ipv4.address }}:{{ prometheus_port | default(9090) }}/api/v1/targets"
         method: GET
         status_code: 200
       register: targets_check
@@ -79,10 +79,10 @@
           - Nginx Health Check: https://{{ ansible_default_ipv4.address }}/nginx-health
           
           Internal services (localhost only):
-          - Prometheus Web UI: http://localhost:{{ prometheus_port }}/
-          - Node Exporter Metrics: http://localhost:{{ node_exporter_port }}/metrics
-          - Prometheus Targets: http://localhost:{{ prometheus_port }}/targets
-          - Grafana Direct Access: http://localhost:{{ grafana_port }}/
+          - Prometheus Web UI: http://localhost:{{ prometheus_port | default(9090) }}/
+          - Node Exporter Metrics: http://localhost:{{ node_exporter_port | default(9100) }}/metrics
+          - Prometheus Targets: http://localhost:{{ prometheus_port | default(9090) }}/targets
+          - Grafana Direct Access: http://localhost:{{ grafana_port | default(3000) }}/
           
           Dashboard JSON files location: {{ grafana_dashboards_dir }}
           

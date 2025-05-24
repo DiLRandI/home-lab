@@ -1,7 +1,7 @@
 ---
 # Grafana Role Defaults
 # Version of grafana to install
-# Check available versions at: https://github.com/grafana/grafana/releases
+# Check available versions at: https://grafana.com/grafana/download
 grafana_version: "12.0.1"
 grafana_user: "grafana"
 grafana_group: "grafana"
