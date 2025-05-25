@@ -35,16 +35,16 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref AmiId
-      InstanceType: t4g.micro
+      InstanceType: t4g.nano
       KeyName: !Ref KeyName
       SecurityGroupIds:
         - !GetAtt MySecurityGroup.GroupId
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: 20
-            VolumeType: gp3
-            DeleteOnTermination: true
+      # BlockDeviceMappings:
+      #   - DeviceName: /dev/xvda
+      #     Ebs:
+      #       VolumeSize: 20
+      #       VolumeType: gp3
+      #       DeleteOnTermination: true
       UserData:
         Fn::Base64: |
           #!/bin/bash
