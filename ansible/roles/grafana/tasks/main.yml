@@ -142,6 +142,30 @@
     - not __grafana_is_installed.stat.exists or
       (__grafana_current_version is defined and __grafana_current_version != grafana_version)
 
+- name: Copy grafana configuration defaults
+  copy:
+    src: "{{ __grafana_temp_dir.path }}/grafana-v{{ grafana_version }}/conf/"
+    dest: "{{ grafana_home_dir }}/conf/"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+    remote_src: true
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
+- name: Fix permissions for conf directory
+  file:
+    path: "{{ grafana_home_dir }}/conf"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0755"
+    recurse: yes
+  when:
+    - not __grafana_is_installed.stat.exists or
+      (__grafana_current_version is defined and __grafana_current_version != grafana_version)
+
 - name: Create grafana public directory
   file:
     path: "{{ grafana_home_dir }}/public"
