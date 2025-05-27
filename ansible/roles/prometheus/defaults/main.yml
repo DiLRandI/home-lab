@@ -29,6 +29,9 @@ prometheus_scrape_configs:
     static_configs:
       - targets:
           - "localhost:9100"
+          - "deleema-ubuntu:9100"
+          - "orangepizero3:9100"
+          - "orangepipc:9100"
 prometheus_alerting:
   alertmanagers: []
 prometheus_remote_write: []
