@@ -2,8 +2,16 @@
 
 # Test script to validate the monitoring stack deployment
 # Run this script after running 'make install-software'
+# 
+# This script validates:
+# - Ansible inventory configuration
+# - External service endpoints (HTTPS/Nginx)
+# - Service accessibility and health
+#
+# Usage: ./scripts/test-monitoring.sh
+# or: make validate-stack
 
-echo "=== Monitoring Stack Validation ==="
+echo "=== Home Lab Monitoring Stack Validation ==="
 echo
 
 # Check if inventory file exists and has content
@@ -58,14 +66,16 @@ echo "   - Direct Grafana: http://localhost:3000/ (via SSH tunnel or server)"
 echo
 
 echo "=== Next Steps ==="
-echo "1. Login to Grafana and change the default password"
-echo "2. Explore the pre-configured Node Exporter dashboard"
+echo "1. Login to Grafana and change the default password (admin/admin)"
+echo "2. Explore the pre-configured Node Exporter dashboards"
 echo "3. Add custom dashboards by placing JSON files in:"
 echo "   ansible/roles/grafana/files/dashboards/"
 echo "4. Re-run 'make install-software' to deploy custom dashboards"
+echo "5. Run 'make validate-stack' anytime to re-validate the deployment"
 echo
 echo "🔒 Security Notes:"
-echo "   - All monitoring services run on localhost only"
-echo "   - External access secured via nginx reverse proxy with SSL"
-echo "   - Only ports 22, 80, 443 are externally accessible"
+echo "   - All monitoring services run on localhost only (127.0.0.1)"
+echo "   - External access secured via nginx reverse proxy with SSL/TLS"
+echo "   - Only ports 22 (SSH), 80 (HTTP), 443 (HTTPS) are externally accessible"
+echo "   - Self-signed SSL certificate in use (accept browser warning)"
 echo

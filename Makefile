@@ -1,4 +1,5 @@
-# Makefile
+# Home Lab Monitoring Stack - Makefile
+# Automated deployment for Prometheus, Grafana, Node Exporter on AWS
 
 # Default SSH key path, can be overridden with: make target ssh-key=/path/to/key.pem
 SSH_KEY_PATH ?= ~/.ssh/id_rsa
@@ -7,7 +8,7 @@ ifdef ssh-key
     SSH_KEY_PATH = $(ssh-key)
 endif
 
-.PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-grafana run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy
+.PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-grafana run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy validate-stack
 
 update-ip:
 	@echo "Retrieving your public IP address..."
@@ -86,3 +87,13 @@ ansible-deploy: setup-ansible run-monitoring-stack
 # Complete monitoring stack deployment
 monitoring-deploy: setup-ansible run-monitoring-stack
 	@echo "Monitoring stack deployment completed!"
+
+# Validate deployed monitoring stack
+validate-stack:
+	@echo "Running monitoring stack validation..."
+	@if [ ! -f "scripts/test-monitoring.sh" ]; then \
+		echo "Error: Validation script not found at scripts/test-monitoring.sh"; \
+		exit 1; \
+	fi
+	chmod +x scripts/test-monitoring.sh
+	./scripts/test-monitoring.sh

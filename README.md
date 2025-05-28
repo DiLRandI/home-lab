@@ -1,6 +1,6 @@
 # Home Lab Monitoring Stack
 
-A secure, automated monitoring solution deployed on AWS with Prometheus, Grafana, and Node Exporter.
+A comprehensive, secure, and automated monitoring solution deployed on AWS infrastructure with Prometheus, Grafana, Node Exporter, and Nginx reverse proxy.
 
 ## 🎯 Quick Start
 
@@ -8,19 +8,26 @@ A secure, automated monitoring solution deployed on AWS with Prometheus, Grafana
 # 1. Deploy AWS infrastructure
 make deploy
 
-# 2. Install monitoring stack  
+# 2. Install complete monitoring stack  
 make install-software
 
-# 3. Access Grafana
+# 3. Validate deployment
+make validate-stack
+
+# 4. Access Grafana
 # https://your-ec2-ip/ (admin/admin)
 ```
 
 ## 🏗️ Architecture
 
-- **Infrastructure**: AWS EC2 with CloudFormation
-- **Monitoring**: Prometheus + Grafana + Node Exporter  
-- **Security**: Nginx reverse proxy with SSL/TLS
+- **Infrastructure**: AWS EC2 (t4g.nano) with CloudFormation
+- **Monitoring**: 
+  - Prometheus 2.54.1 (metrics collection)
+  - Grafana 12.0.1 (visualization and dashboards)
+  - Node Exporter 1.8.2 (system metrics)
+- **Security**: Nginx reverse proxy with SSL/TLS termination
 - **Automation**: Ansible configuration management
+- **Current Status**: ✅ Production ready with comprehensive security
 
 ## 🔧 Available Commands
 
