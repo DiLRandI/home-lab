@@ -8,6 +8,9 @@ Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair to enable SSH access
+  MyIpAddress:
+    Type: String
+    Description: Your IP address in CIDR notation (e.g., 203.0.113.0/24)
 
 Resources:
   MySecurityGroup:
@@ -18,17 +21,17 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref MyIpAddress
           Description: SSH access
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref MyIpAddress
           Description: HTTP access via nginx
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref MyIpAddress
           Description: HTTPS access via nginx
 
   MyEC2Instance:
@@ -49,7 +52,6 @@ Resources:
         Fn::Base64: |
           #!/bin/bash
           curl https://github.com/dilrandi.keys >> ~/.ssh/authorized_keys
-
 
 Outputs:
   PublicIp:

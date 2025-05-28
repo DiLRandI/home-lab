@@ -9,7 +9,15 @@ endif
 
 .PHONY: deploy install-ansible setup-ansible run-ansible run-prometheus run-grafana run-monitoring-stack install-software test-ansible update-inventory ansible-deploy monitoring-deploy
 
-deploy:
+update-ip:
+	@echo "Retrieving your public IP address..."
+	$(eval MY_PUBLIC_IP := $(shell curl -s https://checkip.amazonaws.com))
+	@echo "Your public IP is: $(MY_PUBLIC_IP)"
+	jq --arg myip "$(MY_PUBLIC_IP)/32" '(.[] | select(.ParameterKey=="MyIpAddress") | .ParameterValue) = $$myip' param/param.json > param/param.json.tmp && mv param/param.json.tmp param/param.json
+	@echo "Updated param/param.json with your public IP."
+
+deploy: update-ip
+	@echo "Deploying CloudFormation stack..."
 	aws cloudformation deploy \
 		--template-file infrastructure.yaml \
 		--stack-name home-lab-stack \
