@@ -32,6 +32,10 @@ prometheus_scrape_configs:
           - "deleema-ubuntu:9100"
           - "orangepizero3:9100"
           - "orangepipc:9100"
+  - job_name: windows_exporter
+    static_configs:
+      - targets:
+          - "deleema-pc:9182"
 prometheus_alerting:
   alertmanagers: []
 prometheus_remote_write: []

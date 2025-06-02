@@ -9,6 +9,6 @@
   },
   {
     "ParameterKey": "MyIpAddress",
-    "ParameterValue": "212.104.228.44/32"
+    "ParameterValue": "x.x.x.x/xx"
   }
 ]
